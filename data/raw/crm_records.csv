@@ -1,0 +1,5 @@
+account_id,first_name,last_name,dob,address,city,postcode,debt_amount
+CRM-1001,Usama,Farooq,1996-05-14,124 High Street,Birmingham,B1 1AA,450.5
+CRM-1002,Mubashra,Razzaq,1998-11-20,45 Park Lane,London,W1K 1AA,1200.0
+CRM-1003,Alexander,Smith,1985-03-30,89 Station Road,Nottingham,NG1 2AB,85.2
+CRM-1004,Mohammed,Al-Mansoor,1991-08-05,12 Victoria Street,Manchester,M1 1AE,920.75

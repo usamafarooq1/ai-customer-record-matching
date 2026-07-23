@@ -1,102 +1,82 @@
-import json
 import os
 import random
+from faker import Faker
 import pandas as pd
 
-# Set seed for reproducible dirty data generation
+fake = Faker("en_GB")
 random.seed(42)
-
-# Raw clean customer profiles
-BASE_CUSTOMERS = [
-    {
-        "account_id": "CRM-1001",
-        "first_name": "Usama",
-        "last_name": "Farooq",
-        "dob": "1996-05-14",
-        "address": "124 High Street",
-        "city": "Birmingham",
-        "postcode": "B1 1AA",
-        "debt_amount": 450.50,
-    },
-    {
-        "account_id": "CRM-1002",
-        "first_name": "Mubashra",
-        "last_name": "Razzaq",
-        "dob": "1998-11-20",
-        "address": "45 Park Lane",
-        "city": "London",
-        "postcode": "W1K 1AA",
-        "debt_amount": 1200.00,
-    },
-    {
-        "account_id": "CRM-1003",
-        "first_name": "Alexander",
-        "last_name": "Smith",
-        "dob": "1985-03-30",
-        "address": "89 Station Road",
-        "city": "Nottingham",
-        "postcode": "NG1 2AB",
-        "debt_amount": 85.20,
-    },
-    {
-        "account_id": "CRM-1004",
-        "first_name": "Mohammed",
-        "last_name": "Al-Mansoor",
-        "dob": "1991-08-05",
-        "address": "12 Victoria Street",
-        "city": "Manchester",
-        "postcode": "M1 1AE",
-        "debt_amount": 920.75,
-    },
-]
+Faker.seed(42)
 
 
-def introduce_dirty_variations(record: dict) -> dict:
-    """Intentionally creates messy external public record variations."""
+def introduce_noise(record: dict) -> dict:
+    """Simulates real-world data noise (OCR typos, abbreviations, missing parts)."""
     dirty = record.copy()
-
-    # Vary account ID prefix to simulate Electoral Roll / Debt Registry
     dirty["public_record_id"] = record["account_id"].replace("CRM", "PUB")
 
-    # Name variations (middle initials, truncations)
-    name_draw = random.random()
-    if name_draw < 0.33:
-        dirty["first_name"] = f"{record['first_name'][0]}."  # e.g., "U."
-    elif name_draw < 0.66:
-        dirty["first_name"] = f"{record['first_name']} M."  # e.g., "Usama M."
+    # Name noise
+    rand_name = random.random()
+    if rand_name < 0.2:
+        dirty["first_name"] = dirty["first_name"][0]
+    elif rand_name < 0.4:
+        dirty["first_name"] = f"{dirty['first_name']} {fake.first_name()[0]}."
 
-    # Address variations
-    dirty["address"] = (
-        dirty["address"].replace("Street", "St").replace("Road", "Rd")
-    )
+    # Address noise
+    address = dirty["address"]
+    replacements = {
+        "Street": "St",
+        "Road": "Rd",
+        "Avenue": "Ave",
+        "Drive": "Dr",
+        "Lane": "Ln",
+    }
+    for k, v in replacements.items():
+        if k in address and random.random() > 0.4:
+            address = address.replace(k, v)
+    dirty["address"] = address
 
-    # Postcode variation (removing spaces)
-    if random.random() > 0.5:
+    # Postcode noise
+    if random.random() < 0.5:
         dirty["postcode"] = dirty["postcode"].replace(" ", "")
 
-    # Drop fields not present in public registry
     del dirty["debt_amount"]
     del dirty["account_id"]
-
     return dirty
 
 
-def generate_datasets():
+def generate_large_datasets(num_records: int = 1000):
     os.makedirs("data/raw", exist_ok=True)
+    crm_data = []
 
-    crm_df = pd.DataFrame(BASE_CUSTOMERS)
-    public_records = [
-        introduce_dirty_variations(rec) for rec in BASE_CUSTOMERS
-    ]
+    print(f"Generating {num_records} realistic UK customer records...")
+
+    for i in range(1, num_records + 1):
+        crm_data.append(
+            {
+                "account_id": f"CRM-{10000 + i}",
+                "first_name": fake.first_name(),
+                "last_name": fake.last_name(),
+                "dob": str(
+                    fake.date_of_birth(minimum_age=18, maximum_age=80)
+                ),
+                "address": fake.street_address(),
+                "city": fake.city(),
+                "postcode": fake.postcode(),
+                "debt_amount": round(random.uniform(50.0, 5000.0), 2),
+            }
+        )
+
+    crm_df = pd.DataFrame(crm_data)
+    public_records = [introduce_noise(rec) for rec in crm_data]
+    random.shuffle(public_records)
     public_df = pd.DataFrame(public_records)
 
     crm_df.to_csv("data/raw/crm_records.csv", index=False)
     public_df.to_csv("data/raw/public_electoral_records.csv", index=False)
 
-    print("Successfully generated CRM and Electoral public datasets!")
-    print(f"CRM Records saved: {len(crm_df)}")
-    print(f"Public Records saved: {len(public_df)}")
+    print(
+        f"✅ Datasets generated successfully in 'data/raw/' ({num_records} records each)."
+    )
 
 
 if __name__ == "__main__":
-    generate_datasets()
+    generate_large_datasets(1000)
